@@ -1,0 +1,48 @@
+:root {
+    --neon-blue: #5B6CFF;
+    --cyber-green: #00FF9D;
+    --dark-bg: #0F0F1F;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    background: var(--dark-bg);
+    font-family: 'Exo 2', sans-serif;
+    color: white;
+    min-height: 100vh;
+  }
+  
+  /* Неоновый текст */
+  .glowing-text {
+    text-shadow: 0 0 10px var(--neon-blue),
+                 0 0 20px var(--neon-blue),
+                 0 0 30px var(--neon-blue);
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes glow {
+    from { opacity: 0.8; }
+    to { opacity: 1; }
+  }
+  
+  /* Стеклянный эффект формы */
+  .glass-morphism {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  }
+  
+  /* Анимированный прогресс-бар */
+  .progress-bar {
+    height: 4px;
+    background: linear-gradient(90deg, var(--neon-blue) 0%, var(--cyber-green) 100%);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
