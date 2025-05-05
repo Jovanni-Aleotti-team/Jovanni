@@ -4,15 +4,11 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
+      - "80:80"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
     networks:
-      - car-app-net
+      - app-network
 
 networks:
-  car-app-net:
-    driver: bridge
+  app-network:
