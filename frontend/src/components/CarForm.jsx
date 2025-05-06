@@ -14,11 +14,12 @@ export default function CarForm({ carData, setCarData, setProgress }) {
           <div className="form-group">
             <label className="block text-lg mb-2">Марка автомобиля</label>
             <input
-              name="brand"
-              value={carData.brand}
-              onChange={handleInputChange}
-              className="w-full bg-gray-800 rounded-lg p-3 focus:ring-2 focus:ring-[var(--neon-blue)]"
-            />
+                name="brand"
+                placeholder="Например: BMW"
+                value={carData.brand}
+                onChange={handleInputChange}
+                className="w-full bg-gray-900 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--neon-blue)] transition-all"
+              />
           </div>
           
           {/* Добавьте остальные поля формы аналогично */}
