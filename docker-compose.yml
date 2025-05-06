@@ -5,8 +5,6 @@ services:
     build: ./frontend
     ports:
       - "80:80"
-    volumes:
-      - ./frontend:/app
     networks:
       - app-network
 
