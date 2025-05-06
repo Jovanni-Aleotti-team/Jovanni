@@ -29,3 +29,8 @@ coverage/
 .bundleignore
 .bin
 .git
+
+node_modules
+dist
+build
+*.log
