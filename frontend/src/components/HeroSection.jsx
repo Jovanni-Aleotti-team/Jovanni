@@ -1,12 +1,11 @@
 export default function HeroSection() {
-    return (
-      <section className="hero-section">
-        <div className="video-overlay" />
-        <h1 className="glowing-text text-4xl text-center py-20">
-          Узнай <span className="text-[var(--cyber-green)]">реальную стоимость</span>
-          <br />
-          своего авто за <span className="text-[var(--cyber-green)]">2 минуты</span>
-        </h1>
-      </section>
-    )
-  }
+  return (
+    <section className="text-center py-20 bg-gradient-to-br from-[#0f0f1f] to-[#1c1c2e]">
+      <h1 className="text-4xl md:text-5xl font-extrabold glowing-text">
+        Узнай стоимость своего авто <br />
+        <span className="text-cyber">с помощью ИИ</span>
+      </h1>
+      <p className="text-lg mt-4 text-gray-400">Jovanni: умный способ оценки автомобиля</p>
+    </section>
+  )
+}

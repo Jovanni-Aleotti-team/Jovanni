@@ -1,86 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --neon-blue: #5B6CFF;
-  --cyber-green: #00FF9D;
-  --dark-bg: #0F0F1F;
-  --glass-bg: rgba(255, 255, 255, 0.05);
+  --neon: #5B6CFF;
+  --cyber: #00FF9D;
+  --dark: #0F0F1F;
 }
 
-  
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
+body {
+  font-family: 'Exo 2', sans-serif;
+  background: var(--dark);
+  color: white;
+}
 
-  body {
-    background: linear-gradient(135deg, #0F0F1F, #151530);
-    font-family: 'Exo 2', sans-serif;
-    color: white;
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
-  }
-  
-  /* Анимация свечения */
-  .glowing-text {
-    text-shadow: 0 0 10px var(--neon-blue),
-                0 0 20px var(--neon-blue),
-                0 0 30px var(--neon-blue);
-    animation: glow 2s ease-in-out infinite alternate;
-  }
+.glowing-text {
+  text-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon);
+  animation: glow 2s ease-in-out infinite alternate;
+}
 
-  
-  @keyframes glow {
-    from { opacity: 0.8; }
-    to { opacity: 1; }
-  }
-  
-  /* Глассморфизм */
-  .glass-morphism {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-    transition: transform 0.3s ease;
-  }
-  
-    .glass-morphism:hover {
-      transform: scale(1.02);
-    }
-    
-    /* Прогресс бар */
-    .progress-bar {
-      height: 6px;
-      background: linear-gradient(90deg, var(--neon-blue) 0%, var(--cyber-green) 100%);
-      transition: width 0.5s ease;
-      border-radius: 4px;
-    }
+@keyframes glow {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
+}
 
-    /* Hero секция с видео */
-  .hero-section {
-    position: relative;
-    height: 60vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    overflow: hidden;
-  }
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
 
-  .hero-section::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: url('https://cdn.pixabay.com/photo/2020/04/24/10/12/car-5086645_1280.jpg') no-repeat center center/cover;
-    filter: brightness(0.3);
-    z-index: -2;
-  }
+.progress-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--neon), var(--cyber));
+  transition: width 0.5s ease;
+}
 
-  .video-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(15,15,31,0.8), rgba(15,15,31,0.4));
-    z-index: -1;
-  }
+.animate-fade-in {
+  animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
