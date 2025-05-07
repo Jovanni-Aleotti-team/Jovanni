@@ -1,9 +1,30 @@
 import { motion } from 'framer-motion'
 
 const examples = [
-  { brand: 'Toyota Camry', year: 2018, mileage: '65 000 км', price: '1 890 000 ₽' },
-  { brand: 'Kia Rio', year: 2020, mileage: '34 000 км', price: '1 230 000 ₽' },
-  { brand: 'Lada Vesta', year: 2021, mileage: '22 000 км', price: '950 000 ₽' }
+    { 
+        brand: 'Toyota Camry', 
+        year: 2018, 
+        mileage: '65 000 км',
+        price: '1 890 000 ₽',
+        features: ['Полный привод', '2.5 л', 'Автомат']
+      },
+
+      { 
+        brand: 'BMW 5', 
+        year: 2017, 
+        mileage: '165 000 км',
+        price: '3 500 000 ₽',
+        features: ['задний привод', '2 л', 'Автомат']
+      },
+
+      { 
+        brand: 'Lada Vesta', 
+        year: 2022, 
+        mileage: '10 000 км',
+        price: '1 000 000 ₽',
+        features: ['Полный привод', '1.6 л', 'Механика']
+      },
+
 ]
 
 export default function ExampleEstimation() {

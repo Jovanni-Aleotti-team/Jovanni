@@ -6,6 +6,7 @@ import LottieAnimation from './components/LottieAnimation'
 import FeaturesSection from './components/FeaturesSection'
 import ResultCard from './components/ResultCard'
 import ExampleEstimation from './components/ExampleEstimation'
+import Footer from './components/Footer'
 
 export default function App() {
   const [progress, setProgress] = useState(0)
@@ -42,6 +43,8 @@ export default function App() {
 
       {/* Преимущества */}
       <FeaturesSection />
+
+      <Footer />
 
       {/* Анимация в отдельном разделе */}
       <div className="w-full max-w-4xl glass-morphism p-8">

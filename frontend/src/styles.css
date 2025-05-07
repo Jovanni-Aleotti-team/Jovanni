@@ -110,3 +110,58 @@ body {
 .responsive-grid {
   @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8;
 }
+
+.max-w-screen-xl {
+  max-width: 1280px;
+}
+
+/* Эффект параллакса */
+.parallax-bg {
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Анимация появления */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slide-up 0.8s ease-out;
+}
+
+/* Градиентные обводки */
+.gradient-border {
+  position: relative;
+  background: var(--dark);
+  border-radius: 24px;
+}
+
+.gradient-border::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(45deg, var(--neon), var(--cyber));
+  border-radius: 26px;
+  filter: blur(10px);
+}
+
+/* Ховер-эффекты для карточек */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(91, 108, 255, 0.2);
+}
