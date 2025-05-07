@@ -46,3 +46,67 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* gg */
+
+/* Новые градиентные эффекты */
+.gradient-border {
+  position: relative;
+  background: var(--dark);
+  border-radius: 20px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--neon), var(--cyber));
+  border-radius: 22px;
+  z-index: -1;
+  animation: rotate-gradient 8s linear infinite;
+}
+
+@keyframes rotate-gradient {
+  100% { transform: rotate(360deg); }
+}
+
+/* Иконки */
+.icon-blob {
+  @apply w-16 h-16 flex items-center justify-center rounded-2xl;
+  background: rgba(91, 108, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.icon-blob:hover {
+  background: rgba(91, 108, 255, 0.2);
+  transform: translateY(-5px);
+}
+
+/* Новая типографика */
+.section-title {
+  @apply text-4xl font-bold mb-12 text-center;
+  position: relative;
+  display: inline-block;
+}
+
+.section-title::after {
+  content: '';
+  @apply absolute bottom-0 left-1/2 w-24 h-1 bg-neon;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+/* Эффект параллакса */
+.parallax-layer {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Адаптивные сетки */
+.responsive-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8;
+}
