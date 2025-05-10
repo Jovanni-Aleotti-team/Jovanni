@@ -30,7 +30,6 @@ coverage/
 .bin
 .git
 
-node_modules
 dist
 build
 *.log
