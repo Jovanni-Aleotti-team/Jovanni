@@ -1,118 +1,118 @@
-import csv
 import time
 import random
-from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
 import requests
+from requests.exceptions import RequestException
+from bs4 import BeautifulSoup
 import os
-from selenium import webdriver 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0",
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/112.0.0.0 Safari/537.36'
+    ),
+    'Accept-Language': 'ru-RU,ru;q=0.9',
+    'Referer': 'https://www.avito.ru/',
 }
 
-BASE_URL = "https://www.avito.ru"
-START_URL = "https://www.avito.ru/all/avtomobili"
-
-def get_listing_urls(start_url, pages=5):
-    all_links = []
-    for page in range(1, pages + 1):
-        page_url = f"{start_url}?p={page}"
-        chrome_options = Options()
-        # chrome_options.add_argument("--headless")  # отключено для отладки
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-        driver.get(page_url)
-        time.sleep(random.uniform(2, 4))
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[data-marker='item-title']"))
-        )
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        driver.quit()
-
-        links = []
-        for a in soup.select("a[data-marker='item-title']"):
-            href = a.get("href")
-            if href and "/avtomobili/" in href:
-                links.append(BASE_URL + href.split("?")[0])
-        all_links.extend(links)
-    return list(set(all_links))
-
-def parse_car_page(url):
-    chrome_options = Options()
-    # chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+# --- Proxy fetching function ---
+def get_free_proxies():
+    """
+    Fetch a list of free HTTP proxies from ProxyScrape.
+    Returns a list of proxy URLs like 'http://host:port'.
+    """
+    url = ("https://api.proxyscrape.com/v2/?request=getproxies"
+           "&protocol=http&timeout=10000"
+           "&country=all&ssl=all&anonymity=all")
     try:
-        time.sleep(random.uniform(2, 4))
-        driver.get(url)
-        time.sleep(random.uniform(1, 3))
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-
-        title_tag = soup.find("h1")
-        title = title_tag.text.strip() if title_tag else "N/A"
-
-        price_tag = soup.select_one('[itemprop="price"]')
-        price = price_tag["content"] if price_tag else "N/A"
-
-        params = soup.select("ul.params-paramsList-_awNW li")
-        param_dict = {li.find("span").text.split(":")[0].strip(): li.text.split(":")[1].strip()
-                      for li in params if ":" in li.text}
-
-        price_ranges = soup.select("div.styles-range-GUls8")
-        avito_valuation = {}
-        for block in price_ranges:
-            label = block.find("span").text.strip()
-            value = block.select_one(".styles-subtitle-_GzPh")
-            if value:
-                avito_valuation[label] = value.text.strip()
-
-        return {
-            "url": url,
-            "title": title,
-            "price": price,
-            **param_dict,
-            **avito_valuation
-        }
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        lines = resp.text.splitlines()
+        return ["http://" + line.strip() for line in lines if line.strip()]
     except Exception as e:
-        print(f"Ошибка при парсинге {url}: {e}")
-        return None
-    finally:
-        driver.quit()
+        print(f"Warning: could not fetch proxies: {e}")
+        return []
 
-def save_to_csv(data, filename="cars.csv"):
-    if not data:
-        return
-    keys = sorted(set().union(*(d.keys() for d in data)))
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
-        writer.writeheader()
-        writer.writerows(data)
+OUT_FILE = os.path.join(BASE_DIR, 'urls.txt')
+BASE_URL = 'https://www.avito.ru/all/avtomobili'
 
-def run_parser():
-    all_data = []
+def collect_links(max_pages=None, delay=2.0):
+    # fetch proxies once
+    PROXIES = get_free_proxies()
+    print(f"Fetched {len(PROXIES)} proxies")
+    page = 1
+    total = 0
 
-    print("[*] Собираем ссылки на карточки...")
-    card_urls = get_listing_urls(START_URL, pages=5)
-    print(f"[+] Найдено {len(card_urls)} объявлений")
+    with open(OUT_FILE, 'w', encoding='utf-8') as f:
+        while True:
+            params = {'p': page}
+            print(f'→ Fetching page {page} …')
+            # choose a random proxy for this request
+            proxy = random.choice(PROXIES) if PROXIES else None
+            proxy_dict = {'http': proxy, 'https': proxy} if proxy else None
+            try:
+                r = requests.get(
+                    BASE_URL,
+                    headers=HEADERS,
+                    params=params,
+                    proxies=proxy_dict,
+                    timeout=10
+                )
+            except RequestException as e:
+                print(f'  ! Request exception: {e}. Rotating proxy and retrying...')
+                time.sleep(delay * 5 + random.uniform(0, delay))
+                # remove bad proxy
+                if proxy in PROXIES:
+                    PROXIES.remove(proxy)
+                    if not PROXIES:
+                        PROXIES = get_free_proxies()
+                        print(f"Refilled proxies: {len(PROXIES)}")
+                continue
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(parse_car_page, card_urls))
-        time.sleep(random.uniform(1, 3))
+            if r.status_code == 429:
+                print('  ! HTTP 429 Too Many Requests. Rotating proxy and retrying...')
+                time.sleep(delay * 5 + random.uniform(0, delay))
+                if proxy in PROXIES:
+                    PROXIES.remove(proxy)
+                    if not PROXIES:
+                        PROXIES = get_free_proxies()
+                        print(f"Refilled proxies: {len(PROXIES)}")
+                continue
 
-    all_data = [r for r in results if r]
-    save_to_csv(all_data)
-    print(f"[✓] Готово. Сохранено {len(all_data)} записей в cars.csv")
+            if r.status_code != 200:
+                print(f'  ! HTTP {r.status_code} error. Retrying after delay...')
+                time.sleep(delay * 5 + random.uniform(0, delay))
+                continue
 
-if __name__ == "__main__":
-    run_parser()
+            soup = BeautifulSoup(r.text, 'lxml')
+            cards = soup.select('a[data-marker="item-title"]')
+            if not cards:
+                print('  ! Нет ссылок — завершаю.')
+                break
+
+            for a in cards:
+                href = a['href']
+                if href.startswith('/'):
+                    href = 'https://www.avito.ru' + href
+                f.write(href + '\n')
+            count = len(cards)
+            total += count
+            print(f'  • {count} links, total {total}')
+
+            # Переходим на следующую страницу
+            page += 1
+            if max_pages and page > max_pages:
+                print(f'  • Достигнут max_pages={max_pages}, останавливаюсь.')
+                break
+            # Pause with jitter to avoid rate limits
+            sleep_time = delay + random.uniform(0, delay)
+            time.sleep(sleep_time)
+
+    print(f'Готово, всего ссылок: {total} → {OUT_FILE}')
+
+if __name__ == '__main__':
+    collect_links(max_pages=None, delay=2.0)
