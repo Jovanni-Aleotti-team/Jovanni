@@ -3,11 +3,4 @@ requests
 selenium
 webdriver-manager
 pandas
-scrapy
-scrapy-user-agents
-scrapy-playwright
-aiohttp
-aiofiles
-aiolimiter
-proxybroker
-aiohttp_retry
+tqdm

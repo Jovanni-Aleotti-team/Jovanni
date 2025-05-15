@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import time
+from tqdm import tqdm
 import os
 from pathlib import Path
 
@@ -43,8 +44,8 @@ save_dir = script_dir / "Avito_pages"
 save_dir.mkdir(parents=True, exist_ok=True)
 
 # Основной цикл по регионам и брендам
-for region in region_slugs:
-    for brand in brand_slugs:
+for region in tqdm(region_slugs, desc="🔍 Регионы", position=0):
+    for brand in tqdm(brand_slugs, desc=f"🚗 Бренды для {region}", position=1, leave=False):
         combo = f"{region}|{brand}"
         if combo in processed:
             print(f"✅ Пропущена обработанная комбинация: {combo}")
