@@ -5,22 +5,20 @@ import asyncio
 import aiohttp
 import aiofiles
 import os
+import random
 from aiolimiter import AsyncLimiter
 from aiohttp_retry import RetryClient, ExponentialRetry
-import random
+from aiohttp import ClientTimeout, TCPConnector, ClientError, ClientConnectorError, ServerTimeoutError
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 URLS_FILE = os.path.join(BASE_DIR, 'urls.txt')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'pages')
-CONCURRENCY = 3           
-DELAY_SEC   = 0.5         
+
+CONCURRENCY = 3
+DELAY_SEC = 0.5
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-
 limiter = AsyncLimiter(max_rate=CONCURRENCY, time_period=1)
-
 
 HEADERS = {
     'User-Agent': (
@@ -32,61 +30,95 @@ HEADERS = {
 }
 
 async def get_free_proxies():
-    """
-    Fetch a list of free HTTP proxies from ProxyScrape.
-    Returns a list of proxy URLs like 'http://host:port'.
-    """
-    url = "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
+    api_url = (
+        "https://api.proxyscrape.com/v2/"
+        "?request=getproxies&protocol=http"
+        "&timeout=10000&country=all"
+        "&ssl=all&anonymity=all"
+    )
     proxies = []
     async with aiohttp.ClientSession() as proxy_sess:
-        resp = await proxy_sess.get(url)
-        text = await resp.text()
-    for line in text.splitlines():
-        line = line.strip()
-        if line:
-            proxies.append(f"http://{line}")
+        try:
+            resp = await proxy_sess.get(api_url, timeout=ClientTimeout(total=10))
+            resp.raise_for_status()
+            text = await resp.text()
+            for line in text.splitlines():
+                if line.strip():
+                    proxies.append(f"http://{line.strip()}")
+        except Exception as e:
+            print(f"[WARN] Не удалось получить прокси: {e}")
     return proxies
 
-async def fetch_and_save(session, url, idx):
-    # choose a proxy for this request
+async def fetch_and_save(session: RetryClient, url: str, idx: int):
     proxy = random.choice(PROXIES) if PROXIES else None
     async with limiter:
         try:
-            async with session.get(url, proxy=proxy) as resp:
+            async with session.get(
+                url,
+                proxy=proxy,
+                timeout=ClientTimeout(total=30)
+            ) as resp:
                 resp.raise_for_status()
-                html = await resp.text()
-                path = os.path.join(OUTPUT_DIR, f'{idx:07}.html')
+                raw = await resp.read()
+                try:
+                    html = raw.decode('utf-8')
+                except UnicodeDecodeError:
+                    html = raw.decode('utf-8', errors='ignore')
+
+                filename = f"{idx:07}.html"
+                path = os.path.join(OUTPUT_DIR, filename)
                 async with aiofiles.open(path, 'w', encoding='utf-8') as f:
                     await f.write(html)
-                print(f'[OK]  {idx}: {url}')
+                print(f"[OK]  {idx}: {url}")
+
+        except (ServerTimeoutError, asyncio.TimeoutError):
+            print(f"[TIMEOUT] {idx}: {url}")
+        except ClientConnectorError as e:
+            print(f"[CONNERR] {idx}: {url} → {e}")
+            if proxy in PROXIES:
+                PROXIES.remove(proxy)
+                print(f"         Прокси {proxy} удалён из пула")
+        except ClientError as e:
+            print(f"[ERR] {idx}: {url} → {e}")
         except Exception as e:
-            print(f'[ERR] {idx}: {url} → {e}')
-        await asyncio.sleep(DELAY_SEC)
+            print(f"[UNKN] {idx}: {url} → {e}")
+        finally:
+            await asyncio.sleep(DELAY_SEC + random.random() * 0.5)
 
 async def main():
-
-    # dynamically fetch free proxies
-    print("Fetching free proxies...")
+    print("Получаем список бесплатных прокси…")
     free_proxies = await get_free_proxies()
-    if not free_proxies:
-        print("Warning: no free proxies found, proceeding without proxy.")
+    if free_proxies:
+        print(f"  → найдено {len(free_proxies)} прокси")
     else:
-        print(f"Fetched {len(free_proxies)} proxies.")
+        print("  → прокси не найдены, работаем без них")
     global PROXIES
     PROXIES = free_proxies
 
     with open(URLS_FILE, 'r', encoding='utf-8') as f:
         urls = [u.strip() for u in f if u.strip()]
-    print(f'Будет скачано {len(urls)} страниц, сохраняем в "{OUTPUT_DIR}/"')
+    print(f"Будет скачано {len(urls)} страниц, сохраняем в `{OUTPUT_DIR}/`")
 
-    # set up retry strategy for HTTP 429 and server errors
-    retry_options = ExponentialRetry(attempts=5, statuses={429, 500, 502, 503, 504})
-    async with RetryClient(raise_for_status=False, retry_options=retry_options, headers=HEADERS) as session:
+    # Корректная инициализация ExponentialRetry
+    retry_opts = ExponentialRetry(
+        attempts=5,
+        statuses={429, 500, 502, 503, 504},
+        start_timeout=1  # вместо retry_interval
+    )
+
+    connector = TCPConnector(ssl=False, limit_per_host=CONCURRENCY)
+
+    async with RetryClient(
+        raise_for_status=False,
+        retry_options=retry_opts,
+        headers=HEADERS,
+        connector=connector
+    ) as session:
         tasks = [
-            asyncio.create_task(fetch_and_save(session, url, i+1))
-            for i, url in enumerate(urls)
+            asyncio.create_task(fetch_and_save(session, url, idx + 1))
+            for idx, url in enumerate(urls)
         ]
         await asyncio.gather(*tasks)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

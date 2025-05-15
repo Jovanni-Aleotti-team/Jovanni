@@ -1,118 +1,82 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 import time
-import random
-import requests
-from requests.exceptions import RequestException
-from bs4 import BeautifulSoup
 import os
+from pathlib import Path
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Настройка Selenium WebDriver (Chrome)
+options = webdriver.ChromeOptions()
+options.add_argument("--start-maximized")
 
+# Укажи путь к chromedriver, если он не прописан в PATH
+service = Service()
 
+driver = webdriver.Chrome(service=service, options=options)
 
-HEADERS = {
-    'User-Agent': (
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/112.0.0.0 Safari/537.36'
-    ),
-    'Accept-Language': 'ru-RU,ru;q=0.9',
-    'Referer': 'https://www.avito.ru/',
-}
+# Переход на главную страницу Avito
+driver.get("https://www.avito.ru/")
 
-# --- Proxy fetching function ---
-def get_free_proxies():
-    """
-    Fetch a list of free HTTP proxies from ProxyScrape.
-    Returns a list of proxy URLs like 'http://host:port'.
-    """
-    url = ("https://api.proxyscrape.com/v2/?request=getproxies"
-           "&protocol=http&timeout=10000"
-           "&country=all&ssl=all&anonymity=all")
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        lines = resp.text.splitlines()
-        return ["http://" + line.strip() for line in lines if line.strip()]
-    except Exception as e:
-        print(f"Warning: could not fetch proxies: {e}")
-        return []
+print("🔐 Войдите в аккаунт Avito вручную в открывшемся окне.")
+input("👉 После входа и полной загрузки нажмите Enter...")
 
-OUT_FILE = os.path.join(BASE_DIR, 'urls.txt')
-BASE_URL = 'https://www.avito.ru/all/avtomobili'
+# Настройка работы со слагами и параллельными вкладками
+script_dir = Path(__file__).resolve().parent
+regions_file = script_dir / 'valid_avito_slugs.txt'
+brands_file = script_dir / 'avito_brand_slugs.txt'
+processed_file = script_dir / 'processed_combinations.txt'
 
-def collect_links(max_pages=None, delay=2.0):
-    # fetch proxies once
-    PROXIES = get_free_proxies()
-    print(f"Fetched {len(PROXIES)} proxies")
-    page = 1
-    total = 0
+# Загрузка списков слагов
+with open(regions_file, 'r', encoding='utf-8') as f:
+    region_slugs = [line.strip() for line in f if line.strip()]
+with open(brands_file, 'r', encoding='utf-8') as f:
+    brand_slugs = [line.strip() for line in f if line.strip()]
 
-    with open(OUT_FILE, 'w', encoding='utf-8') as f:
+# Загрузка уже обработанных комбинаций
+processed = set()
+if processed_file.exists():
+    with open(processed_file, 'r', encoding='utf-8') as f:
+        processed = set(line.strip() for line in f if line.strip())
+
+# Директория для сохранения всех страниц
+save_dir = script_dir / "Avito_pages"
+save_dir.mkdir(parents=True, exist_ok=True)
+
+# Основной цикл по регионам и брендам
+for region in region_slugs:
+    for brand in brand_slugs:
+        combo = f"{region}|{brand}"
+        if combo in processed:
+            print(f"✅ Пропущена обработанная комбинация: {combo}")
+            continue
+
+        print(f"🔄 Обработка комбинации регион={region}, бренд={brand}")
+        combo_dir = save_dir / f"{region}_{brand}"
+        combo_dir.mkdir(parents=True, exist_ok=True)
+
+        base_url = f"https://www.avito.ru/{region}/avtomobili/{brand}"
+        page = 1
         while True:
-            params = {'p': page}
-            print(f'→ Fetching page {page} …')
-            # choose a random proxy for this request
-            proxy = random.choice(PROXIES) if PROXIES else None
-            proxy_dict = {'http': proxy, 'https': proxy} if proxy else None
-            try:
-                r = requests.get(
-                    BASE_URL,
-                    headers=HEADERS,
-                    params=params,
-                    proxies=proxy_dict,
-                    timeout=10
-                )
-            except RequestException as e:
-                print(f'  ! Request exception: {e}. Rotating proxy and retrying...')
-                time.sleep(delay * 5 + random.uniform(0, delay))
-                # remove bad proxy
-                if proxy in PROXIES:
-                    PROXIES.remove(proxy)
-                    if not PROXIES:
-                        PROXIES = get_free_proxies()
-                        print(f"Refilled proxies: {len(PROXIES)}")
-                continue
+            # Используем текущее окно без переключения
+            url = f"{base_url}?p={page}"
+            print(f"→ Загружаю: {url}")
+            driver.get(url)
+            time.sleep(5)
 
-            if r.status_code == 429:
-                print('  ! HTTP 429 Too Many Requests. Rotating proxy and retrying...')
-                time.sleep(delay * 5 + random.uniform(0, delay))
-                if proxy in PROXIES:
-                    PROXIES.remove(proxy)
-                    if not PROXIES:
-                        PROXIES = get_free_proxies()
-                        print(f"Refilled proxies: {len(PROXIES)}")
-                continue
-
-            if r.status_code != 200:
-                print(f'  ! HTTP {r.status_code} error. Retrying after delay...')
-                time.sleep(delay * 5 + random.uniform(0, delay))
-                continue
-
-            soup = BeautifulSoup(r.text, 'lxml')
-            cards = soup.select('a[data-marker="item-title"]')
-            if not cards:
-                print('  ! Нет ссылок — завершаю.')
+            current_url = driver.current_url
+            if page > 1 and ('?p=1' in current_url or current_url.rstrip('/').endswith(f"/{brand}")):
+                print("⏹ Переадресация на первую страницу или отсутствие новых страниц, выходим.")
                 break
 
-            for a in cards:
-                href = a['href']
-                if href.startswith('/'):
-                    href = 'https://www.avito.ru' + href
-                f.write(href + '\n')
-            count = len(cards)
-            total += count
-            print(f'  • {count} links, total {total}')
+            file_path = combo_dir / f"page_{page}.html"
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            print(f"  • Сохранено: {file_path.name}")
 
-            # Переходим на следующую страницу
             page += 1
-            if max_pages and page > max_pages:
-                print(f'  • Достигнут max_pages={max_pages}, останавливаюсь.')
-                break
-            # Pause with jitter to avoid rate limits
-            sleep_time = delay + random.uniform(0, delay)
-            time.sleep(sleep_time)
 
-    print(f'Готово, всего ссылок: {total} → {OUT_FILE}')
+        # Запись обработки комбинации
+        with open(processed_file, 'a', encoding='utf-8') as f:
+            f.write(combo + "\n")
 
-if __name__ == '__main__':
-    collect_links(max_pages=None, delay=2.0)
+driver.quit()
