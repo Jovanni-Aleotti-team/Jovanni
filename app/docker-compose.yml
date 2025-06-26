@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: car-price-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    networks:
+      - car-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: car-price-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - car-network
+
+networks:
+  car-network:
+    driver: bridge
